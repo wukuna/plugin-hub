@@ -1,0 +1,40 @@
+name: Verify Improved Chat Plugin Hub build
+
+on:
+  push:
+    branches:
+      - verify-improved-chat-ui-build
+    paths:
+      - '.github/workflows/verify-improved-chat-ui.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          path: plugin-hub
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: adopt
+          java-version: 11
+      - name: Fetch packager
+        env:
+          PACKAGER_URL: "https://github.com/runelite/plugin-hub-tooling/releases/download/v4/bundle.tar.zst"
+        run: |
+          set -exu
+          curl --location --fail --retry 4 --max-time 30 --output bundle.tar.zst "$PACKAGER_URL"
+          tar xf bundle.tar.zst
+      - name: Prepare
+        run: ./prepare.sh
+      - name: Build Improved Chat
+        env:
+          FORCE_BUILD: improved-chat
+          PACKAGE_IS_PR: false
+        run: |
+          exec java -XX:+UseParallelGC -cp package.jar net.runelite.pluginhub.packager.Packager
